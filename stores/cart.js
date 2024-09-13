@@ -1,18 +1,18 @@
-import {defineStore} from "pinia";
-import {ref} from "vue";
-import axios from "axios";
-import {useTokenStore} from "./token";
-import { toast} from 'vue3-toastify';
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+import axios from 'axios';
+import { useTokenStore } from './token';
+import { toast } from 'vue3-toastify';
+import { useNuxtApp } from '#app';
 
-
-export const useCartStore = defineStore("cart", {
+export const useCartStore = defineStore('cart', {
     state: () => {
         return {
-            isLoadingState:false,
+            isLoadingState: false,
             isChangedState: false,
             cartState: {},
-            cartOpenState: false
-        }
+            cartOpenState: false,
+        };
     },
     getters: {
         cart(state) {
@@ -21,97 +21,127 @@ export const useCartStore = defineStore("cart", {
         total(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.reduce((total, product) => total + product.quantity, 0);
-
-            }
-            else return 0;
+                return cartItems.reduce(
+                    (total, product) => total + product.quantity,
+                    0
+                );
+            } else return 0;
         },
         totalPrice(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.reduce((totalPrice, product) => totalPrice + (product.quantity * product.price), 0);
-            }
-            else return 0;
+                return cartItems.reduce(
+                    (totalPrice, product) =>
+                        totalPrice + product.quantity * product.price,
+                    0
+                );
+            } else return 0;
         },
-        totalNormalPrice(state){
+        totalNormalPrice(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.reduce((totalNormalPrice, product) => totalNormalPrice + (product.quantity * product.normalPrice), 0);
-            }
-            else return 0;
+                return cartItems.reduce(
+                    (totalNormalPrice, product) =>
+                        totalNormalPrice +
+                        product.quantity * product.normalPrice,
+                    0
+                );
+            } else return 0;
         },
         totalWeight(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.reduce((totalWeight, product) => totalWeight + (product.quantity * product.weight), 0);
-            }
-            else return 0;
+                return cartItems.reduce(
+                    (totalWeight, product) =>
+                        totalWeight + product.quantity * product.weight,
+                    0
+                );
+            } else return 0;
         },
         totalVariations(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.reduce((total, product) => total + (product.quantity===0 ? 0:1 ), 0);
-            }
-            else return 0;
+                return cartItems.reduce(
+                    (total, product) =>
+                        total + (product.quantity === 0 ? 0 : 1),
+                    0
+                );
+            } else return 0;
         },
 
         isEmpty(state) {
             if (state.cartState) {
                 const cartItems = Object.values(state.cartState);
-                return cartItems.length===0;
-            }
-            else return 0;
-        }
+                return cartItems.length === 0;
+            } else return 0;
+        },
     },
     actions: {
         async fetchCart() {
-            this.isLoadingState=true;
+            const { $config } = useNuxtApp();
+
+            this.isLoadingState = true;
             try {
-                const response = await axios.get('/api/cart',  {
-                    headers: {
-                        Authorization: `Bearer ${useTokenStore().token}`
+                const response = await axios.get(
+                    `${$config.public.apiBase}/api/cart/`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${useTokenStore().token}`,
+                        },
                     }
-                })
+                );
                 this.cartState = response.data.cart.cart;
                 this.isChangedState = response.data.cart.is_changed;
-                if (this.isChangedState){
+                if (this.isChangedState) {
                     toast.warning('بعضی از کالا های سبد خرید تغییر یافتند');
                 }
-
             } catch (e) {
-                toast.error("خطای در دریافت سبد خرید از سرور");
+                toast.error('خطای در دریافت سبد خرید از سرور');
             } finally {
-                this.isLoadingState=false;
+                this.isLoadingState = false;
             }
         },
         // type=normal,sparepart
-        async addToCart(saleID, productName, url, imageUrl, price, normalPrice, weight,mainProductID, count = 1, type="normal" ) {
+        async addToCart(
+            saleID,
+            productName,
+            url,
+            imageUrl,
+            price,
+            normalPrice,
+            weight,
+            mainProductID,
+            count = 1,
+            type = 'normal'
+        ) {
             const loading = ref(true);
             loading.value = true;
 
-
-
             const toastID = toast.loading(
-                'در حال اضافه کردن محصول به سبد خرید ...',
+                'در حال اضافه کردن محصول به سبد خرید ...'
             );
 
             try {
-                const response = await axios.post('/api/cart/items', {
-                    saleID,
-                    type,
-                    productName,
-                    url,
-                    imageUrl,
-                    price,
-                    normalPrice,
-                    count,
-                    mainProductID,
-                    weight,
-                }, {
-                    headers: {
-                        Authorization: `Bearer ${useTokenStore().token}`,
+                const response = await axios.post(
+                    '/api/cart/items',
+                    {
+                        saleID,
+                        type,
+                        productName,
+                        url,
+                        imageUrl,
+                        price,
+                        normalPrice,
+                        count,
+                        mainProductID,
+                        weight,
                     },
-                });
+                    {
+                        headers: {
+                            Authorization: `Bearer ${useTokenStore().token}`,
+                        },
+                    }
+                );
 
                 this.cartState = response.data.cart.cart;
                 this.isChangedState = response.data.cart.is_changed;
@@ -123,14 +153,11 @@ export const useCartStore = defineStore("cart", {
                     closeOnClick: true,
                     closeButton: true,
                     isLoading: false,
-                    "rtl": true,
-
+                    rtl: true,
                 });
-
             } catch (error) {
-                showErrors(error,toastID);
-
-            }finally {
+                showErrors(error, toastID);
+            } finally {
                 loading.value = false;
             }
         },
@@ -140,11 +167,11 @@ export const useCartStore = defineStore("cart", {
             loading.value = true;
 
             const toastID = toast.loading(
-                'در حال حذف کردن محصول از سبد خرید ...',
+                'در حال حذف کردن محصول از سبد خرید ...'
             );
 
             try {
-                const response = await axios.delete('/api/cart/items/'+id, {
+                const response = await axios.delete('/api/cart/items/' + id, {
                     headers: {
                         Authorization: `Bearer ${useTokenStore().token}`,
                     },
@@ -159,8 +186,7 @@ export const useCartStore = defineStore("cart", {
                     closeOnClick: true,
                     closeButton: true,
                     isLoading: false,
-                    "rtl": true,
-
+                    rtl: true,
                 });
             } catch (error) {
                 let errorMessage = '';
@@ -179,8 +205,7 @@ export const useCartStore = defineStore("cart", {
                     closeOnClick: true,
                     closeButton: true,
                     isLoading: false,
-                    "rtl": true,
-
+                    rtl: true,
                 });
             } finally {
                 loading.value = false;
@@ -190,14 +215,18 @@ export const useCartStore = defineStore("cart", {
             const loading = ref(true);
             loading.value = true;
             const toastID = toast.loading(
-                'در حال تغییر تعداد محصول در سبد خرید ...',
+                'در حال تغییر تعداد محصول در سبد خرید ...'
             );
             try {
-                const response = await axios.patch('/api/cart/items/'+ id, { quantity }, {
-                    headers: {
-                        Authorization: `Bearer ${useTokenStore().token}`,
-                    },
-                });
+                const response = await axios.patch(
+                    '/api/cart/items/' + id,
+                    { quantity },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${useTokenStore().token}`,
+                        },
+                    }
+                );
 
                 this.cartState = response.data.cart.cart;
                 this.isChangedState = response.data.cart.is_changed;
@@ -209,10 +238,8 @@ export const useCartStore = defineStore("cart", {
                     closeOnClick: true,
                     closeButton: true,
                     isLoading: false,
-                    "rtl": true,
-
+                    rtl: true,
                 });
-
             } catch (error) {
                 let errorMessage = '';
 
@@ -229,20 +256,16 @@ export const useCartStore = defineStore("cart", {
                     closeOnClick: true,
                     closeButton: true,
                     isLoading: false,
-                    "rtl": true,
-
+                    rtl: true,
                 });
             } finally {
                 loading.value = false;
             }
         },
-
-
-
     },
 });
 
-function showErrors(error,toastID=null) {
+function showErrors(error, toastID = null) {
     let errorMessage = '';
     for (const key in error.response.data.errors) {
         if (error.response.data.errors.hasOwnProperty(key)) {
@@ -250,8 +273,7 @@ function showErrors(error,toastID=null) {
             errorMessage += `${key}: ${value}, `;
         }
     }
-    if (toastID)
-    {
+    if (toastID) {
         toast.update(toastID, {
             render: errorMessage,
             type: 'error',
@@ -259,12 +281,9 @@ function showErrors(error,toastID=null) {
             closeOnClick: true,
             closeButton: true,
             isLoading: false,
-            "rtl": true,
-
+            rtl: true,
         });
-    } else{
+    } else {
         toast.error(errorMessage);
     }
 }
-
-
